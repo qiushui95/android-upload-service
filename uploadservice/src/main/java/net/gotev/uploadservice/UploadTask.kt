@@ -15,7 +15,7 @@ import java.io.IOException
 import java.util.ArrayList
 import java.util.Date
 
-abstract class UploadTask : Runnable {
+abstract class UploadTask : Runnable, Comparable<UploadTask> {
 
     companion object {
         private val TAG = UploadTask::class.java.simpleName
@@ -27,6 +27,8 @@ abstract class UploadTask : Runnable {
     lateinit var params: UploadTaskParameters
     lateinit var notificationConfig: UploadNotificationConfig
     var notificationId: Int = 0
+
+    private val createTime = System.currentTimeMillis()
 
     /**
      * Flag indicating if the operation should continue or is cancelled. You should never
@@ -111,7 +113,7 @@ abstract class UploadTask : Runnable {
         taskParams: UploadTaskParameters,
         notificationConfig: UploadNotificationConfig,
         notificationId: Int,
-        vararg taskObservers: UploadTaskObserver
+        vararg taskObservers: UploadTaskObserver,
     ) {
         this.context = context
         this.params = taskParams
@@ -145,12 +147,16 @@ abstract class UploadTask : Runnable {
                 break
             } catch (exc: Throwable) {
                 if (!shouldContinue) {
-                    UploadServiceLogger.error(TAG, params.id, exc) { "error while uploading but user requested cancellation." }
+                    UploadServiceLogger.error(TAG,
+                        params.id,
+                        exc) { "error while uploading but user requested cancellation." }
                     break
                 } else if (attempts >= params.maxRetries) {
                     onError(exc)
                 } else {
-                    UploadServiceLogger.error(TAG, params.id, exc) { "error on attempt ${attempts + 1}. Waiting ${errorDelay}s before next attempt." }
+                    UploadServiceLogger.error(TAG,
+                        params.id,
+                        exc) { "error on attempt ${attempts + 1}. Waiting ${errorDelay}s before next attempt." }
 
                     val sleepDeadline = System.currentTimeMillis() + errorDelay * 1000
 
@@ -194,7 +200,8 @@ abstract class UploadTask : Runnable {
     protected fun onProgress(bytesSent: Long) {
         uploadedBytes += bytesSent
         if (shouldThrottle(uploadedBytes, totalBytes)) return
-        UploadServiceLogger.debug(TAG, params.id) { "uploaded ${uploadedBytes * 100 / totalBytes}%, $uploadedBytes of $totalBytes bytes" }
+        UploadServiceLogger.debug(TAG,
+            params.id) { "uploaded ${uploadedBytes * 100 / totalBytes}%, $uploadedBytes of $totalBytes bytes" }
         doForEachObserver { onProgress(uploadInfo, notificationId, notificationConfig) }
     }
 
@@ -207,15 +214,18 @@ abstract class UploadTask : Runnable {
      * @param response response got from the server
      */
     protected fun onResponseReceived(response: ServerResponse) {
-        UploadServiceLogger.debug(TAG, params.id) { "upload ${if (response.isSuccessful) "completed" else "error"}" }
+        UploadServiceLogger.debug(TAG,
+            params.id) { "upload ${if (response.isSuccessful) "completed" else "error"}" }
 
         if (response.isSuccessful) {
             if (params.autoDeleteSuccessfullyUploadedFiles) {
                 for (file in successfullyUploadedFiles) {
                     if (file.handler.delete(context)) {
-                        UploadServiceLogger.info(TAG, params.id) { "successfully deleted: ${file.path}" }
+                        UploadServiceLogger.info(TAG,
+                            params.id) { "successfully deleted: ${file.path}" }
                     } else {
-                        UploadServiceLogger.error(TAG, params.id) { "error while deleting: ${file.path}" }
+                        UploadServiceLogger.error(TAG,
+                            params.id) { "error while deleting: ${file.path}" }
                     }
                 }
             }
@@ -303,5 +313,14 @@ abstract class UploadTask : Runnable {
 
         lastProgressNotificationTime = currentTime
         return false
+    }
+
+    override fun compareTo(other: UploadTask): Int {
+
+        return if (other.params.priority == params.priority) {
+            (createTime - other.createTime).toInt()
+        } else {
+            other.params.priority - params.priority
+        }
     }
 }

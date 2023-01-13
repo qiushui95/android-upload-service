@@ -29,6 +29,7 @@ abstract class UploadRequest<B : UploadRequest<B>>
 constructor(protected val context: Context, protected var serverUrl: String) : Persistable {
 
     private var uploadId = UUID.randomUUID().toString()
+    private var priority: Int = 0
     private var started: Boolean = false
     protected var maxRetries = UploadServiceConfig.retryPolicy.defaultMaxRetries
     protected var autoDeleteSuccessfullyUploadedFiles = false
@@ -51,6 +52,7 @@ constructor(protected val context: Context, protected var serverUrl: String) : P
         get() = UploadTaskParameters(
             taskClass = taskClass.name,
             id = uploadId,
+            priority = priority,
             serverUrl = serverUrl,
             maxRetries = maxRetries,
             autoDeleteSuccessfullyUploadedFiles = autoDeleteSuccessfullyUploadedFiles,
@@ -67,12 +69,12 @@ constructor(protected val context: Context, protected var serverUrl: String) : P
     open fun startUpload(): String {
         check(!started) {
             "You have already called startUpload() on this Upload request instance once and you " +
-                "cannot call it multiple times. Check your code."
+                    "cannot call it multiple times. Check your code."
         }
 
         check(!UploadService.taskList.contains(uploadTaskParameters.id)) {
             "You have tried to perform startUpload() using the same uploadID of an " +
-                "already running task. You're trying to use the same ID for multiple uploads."
+                    "already running task. You're trying to use the same ID for multiple uploads."
         }
 
         started = true
@@ -100,7 +102,7 @@ constructor(protected val context: Context, protected var serverUrl: String) : P
     fun subscribe(
         context: Context,
         lifecycleOwner: LifecycleOwner,
-        delegate: RequestObserverDelegate
+        delegate: RequestObserverDelegate,
     ): RequestObserver {
         return RequestObserver(
             context,
@@ -160,6 +162,11 @@ constructor(protected val context: Context, protected var serverUrl: String) : P
      */
     fun setUploadID(uploadID: String): B {
         this.uploadId = uploadID
+        return self()
+    }
+
+    fun setPriority(priority: Int): B {
+        this.priority = priority
         return self()
     }
 

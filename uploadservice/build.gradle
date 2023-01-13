@@ -18,7 +18,7 @@ project.ext {
 // end - do not modify this if your project is on github
 
 group = library_project_group
-version = library_version
+version = library_version+".0"
 
 android {
     compileSdkVersion target_sdk
@@ -83,4 +83,4 @@ dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
 }
 
-apply from: 'https://raw.githubusercontent.com/sky-uk/gradle-maven-plugin/master/gradle-mavenizer.gradle'
+apply from: '../gradle-mavenizer.gradle'

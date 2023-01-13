@@ -9,11 +9,12 @@ import net.gotev.uploadservice.persistence.PersistableData
 data class UploadTaskParameters(
     val taskClass: String,
     val id: String,
+    val priority: Int,
     val serverUrl: String,
     val maxRetries: Int,
     val autoDeleteSuccessfullyUploadedFiles: Boolean,
     val files: ArrayList<UploadFile>,
-    val additionalParameters: PersistableData
+    val additionalParameters: PersistableData,
 ) : Parcelable, Persistable {
     override fun toPersistableData() = PersistableData().apply {
         putString(CodingKeys.taskClass, taskClass)
@@ -29,6 +30,7 @@ data class UploadTaskParameters(
         private object CodingKeys {
             const val taskClass = "taskClass"
             const val id = "id"
+            const val priority = "priority"
             const val serverUrl = "serverUrl"
             const val maxRetries = "maxRetries"
             const val autoDeleteFiles = "autoDeleteFiles"
@@ -39,10 +41,12 @@ data class UploadTaskParameters(
         override fun createFromPersistableData(data: PersistableData) = UploadTaskParameters(
             taskClass = data.getString(CodingKeys.taskClass),
             id = data.getString(CodingKeys.id),
+            priority = data.getInt(CodingKeys.priority),
             serverUrl = data.getString(CodingKeys.serverUrl),
             maxRetries = data.getInt(CodingKeys.maxRetries),
             autoDeleteSuccessfullyUploadedFiles = data.getBoolean(CodingKeys.autoDeleteFiles),
-            files = ArrayList(data.getArrayData(CodingKeys.files).map { UploadFile.createFromPersistableData(it) }),
+            files = ArrayList(data.getArrayData(CodingKeys.files)
+                .map { UploadFile.createFromPersistableData(it) }),
             additionalParameters = data.getData(CodingKeys.params)
         )
     }

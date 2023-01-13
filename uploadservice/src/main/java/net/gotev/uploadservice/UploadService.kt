@@ -19,6 +19,7 @@ import net.gotev.uploadservice.observer.task.TaskCompletionNotifier
 import java.util.Timer
 import java.util.TimerTask
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ThreadPoolExecutor
 
 class UploadService : Service() {
 
@@ -41,6 +42,13 @@ class UploadService : Service() {
         @JvmStatic
         fun stopUpload(uploadId: String) {
             uploadTasksMap[uploadId]?.cancel()
+            uploadTasksMap.remove(uploadId)
+
+            val threadPool = UploadServiceConfig.threadPool
+
+            if (threadPool is ThreadPoolExecutor) {
+                threadPool.queue.removeAll { it is UploadTask && it.params.id == uploadId }
+            }
         }
 
         /**
@@ -122,7 +130,7 @@ class UploadService : Service() {
 
             UploadServiceLogger.info(TAG, NA) {
                 "Service will be shut down in ${UploadServiceConfig.idleTimeoutSeconds}s " +
-                    "if no new tasks are received"
+                        "if no new tasks are received"
             }
 
             idleTimer = Timer(TAG + "IdleTimer").apply {
@@ -130,7 +138,7 @@ class UploadService : Service() {
                     override fun run() {
                         UploadServiceLogger.info(TAG, NA) {
                             "Service is about to be stopped because idle timeout of " +
-                                "${UploadServiceConfig.idleTimeoutSeconds}s has been reached"
+                                    "${UploadServiceConfig.idleTimeoutSeconds}s has been reached"
                         }
                         stopSelf()
                     }
@@ -181,7 +189,8 @@ class UploadService : Service() {
         }
 
         if (UploadServiceConfig.isForegroundService && uploadTasksMap.isEmpty()) {
-            UploadServiceLogger.debug(TAG, NA) { "All tasks completed, stopping foreground execution" }
+            UploadServiceLogger.debug(TAG,
+                NA) { "All tasks completed, stopping foreground execution" }
             stopForeground(true)
             shutdownIfThereArentAnyActiveTasks()
         }
@@ -203,11 +212,12 @@ class UploadService : Service() {
             "Starting UploadService. Debug info: $UploadServiceConfig"
         }
 
-        val notification = NotificationCompat.Builder(this, UploadServiceConfig.defaultNotificationChannel!!)
-            .setSmallIcon(android.R.drawable.ic_menu_upload)
-            .setOngoing(true)
-            .setGroup(UploadServiceConfig.namespace)
-            .build()
+        val notification =
+            NotificationCompat.Builder(this, UploadServiceConfig.defaultNotificationChannel!!)
+                .setSmallIcon(android.R.drawable.ic_menu_upload)
+                .setOngoing(true)
+                .setGroup(UploadServiceConfig.namespace)
+                .build()
 
         startForeground(UPLOAD_NOTIFICATION_BASE_ID, notification)
 
@@ -217,7 +227,7 @@ class UploadService : Service() {
         if (uploadTasksMap.containsKey(taskCreationParameters.params.id)) {
             UploadServiceLogger.error(TAG, taskCreationParameters.params.id) {
                 "Preventing upload! An upload with the same ID is already in progress. " +
-                    "Every upload must have unique ID. Please check your code and fix it!"
+                        "Every upload must have unique ID. Please check your code and fix it!"
             }
             return shutdownIfThereArentAnyActiveTasks()
         }
