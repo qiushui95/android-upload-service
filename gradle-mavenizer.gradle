@@ -1,5 +1,4 @@
 apply plugin: 'maven-publish'
-apply plugin: 'signing'
 
 def gradlePluginVersion = project.hasProperty('mavPluginVersion') ? project.mavPluginVersion : 'master'
 apply from: "https://raw.githubusercontent.com/sky-uk/gradle-maven-plugin/${gradlePluginVersion}/utils.gradle"
@@ -40,18 +39,12 @@ project.afterEvaluate {
         repositories {
             maven {
                 name ="hero"
+                url = System.getenv('HERO_MAVEN_URL')
                 credentials {
-                    username System.getenv('SONATYPE_NEXUS_USERNAME')
-                    password System.getenv('SONATYPE_NEXUS_PASSWORD')
+                    username System.getenv('HERO_NEXUS_USERNAME')
+                    password System.getenv('HERO_NEXUS_PASSWORD')
                 }
-                url = "https://maven-repo.yingxiong.com/repository/maven-hero-csdk/"
             }
-        }
-    }
-
-    if (getBooleanProperty("mavSigning")) {
-        signing {
-            sign publishing.publications
         }
     }
 }
