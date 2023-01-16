@@ -15,9 +15,9 @@ if (secretPropsFile.exists()) {
         project.ext[name] = value
     }
 } else {
-    project.ext["signing.keyId"] = System.getenv('SIGNING_KEY_ID')
-    project.ext["signing.password"] = System.getenv('SIGNING_PASSWORD')
-    project.ext["signing.secretKeyRingFile"] = System.getenv('SIGNING_SECRET_KEY_RING_FILE')
+    project.ext["signing.keyId"] = System.getenv('SONATYPE_NEXUS_USERNAME')
+    project.ext["signing.password"] = System.getenv('SONATYPE_NEXUS_PASSWORD')
+//    project.ext["signing.secretKeyRingFile"] = System.getenv('SIGNING_SECRET_KEY_RING_FILE')
 }
 
 project.afterEvaluate {
@@ -38,28 +38,13 @@ project.afterEvaluate {
         }
 
         repositories {
-            def isToRemoteRepo = getBooleanProperty("mavPublishToRemoteRepo")
-            def isToInternalRepo = getBooleanProperty("mavPublishToInternalRepo")
-            def isToMavenLocal = getBooleanProperty("mavPublishToMavenLocal")
-
-            if (isToRemoteRepo) {
-                maven {
-                    credentials {
-                        username getStringProperty("mavRemoteRepoUser")
-                        password getStringProperty("mavRemoteRepoPassword")
-                    }
-                    url = getStringProperty("mavRepoRemoteUrl")
+            maven {
+                name ="hero"
+                credentials {
+                    username System.getenv('SONATYPE_NEXUS_USERNAME')
+                    password System.getenv('SONATYPE_NEXUS_PASSWORD')
                 }
-            }
-
-            if (isToInternalRepo) {
-                maven {
-                    url = getStringProperty("mavRepoInternalUrl")
-                }
-            }
-
-            if (isToMavenLocal || (!isToInternalRepo && !isToRemoteRepo)) {
-                mavenLocal()
+                url = "https://maven-repo.yingxiong.com/repository/maven-hero-csdk/"
             }
         }
     }
